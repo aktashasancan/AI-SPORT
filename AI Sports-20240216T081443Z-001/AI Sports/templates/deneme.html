@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MediaPipe JS Pose Detection</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d/control_utils_3d.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <button id="armbtn">SEX</button>
+  <video id="myVideo" style="display: none;" src="/static/IMG_1705.mp4" autoplay></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <script>
+    const armbtn = document.getElementById("armbtn");
+
+    armbtn.addEventListener("click", function () {
+        
+  const video = document.getElementById("myVideo");
+  video.addEventListener('loadeddata', function () {
+    pose.send({image: video});
+
+    setInterval(() => {
+      pose.send({image: video});
+    }, 1000 / 30);
+  });
+
+  const pose = new Pose({
+    locateFile: (file) => {
+      return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+    }
+  });
+  pose.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: true,
+    smoothSegmentation: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  function onResults(results) {
+    if (!results.poseLandmarks) {
+      return;
+    }
+
+    canvasCtx.save();
+    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    canvasCtx.drawImage(results.segmentationMask, 0, 0,
+      canvas.width, canvas.height);
+
+    // Only overwrite existing pixels.
+    canvasCtx.globalCompositeOperation = 'source-in';
+    canvasCtx.fillStyle = 'transparent';
+    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Only overwrite missing pixels.
+    canvasCtx.globalCompositeOperation = 'destination-atop';
+    canvasCtx.drawImage(
+      results.image, 0, 0, canvas.width, canvas.height);
+
+    // Draw the pose connections.
+    canvasCtx.globalCompositeOperation = 'source-over';
+    drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS,
+      {color: '#00FF00', lineWidth: 4});
+    drawLandmarks(canvasCtx, results.poseLandmarks,
+      {color: '#FF0000', lineWidth: 2});
+    canvasCtx.restore();
+  }
+
+  pose.onResults(onResults);
+});
+</script>
+</body>
+</html>
